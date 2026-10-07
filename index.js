@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 
 async function runCurrentAffairsBot() {
-    console.log("Starting Advanced Current Affairs Bot...");
+    console.log("Starting Smart Current Affairs Bot with Real Images...");
     const browser = await puppeteer.launch({ 
         headless: "new",
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
@@ -12,29 +12,42 @@ async function runCurrentAffairsBot() {
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36');
         
-        console.log("Fetching latest Current Affairs with Images & Details...");
+        console.log("Fetching news and matching images...");
         const url = encodeURI('https://ml.wikipedia.org/wiki/പ്രധാന_താൾ'); 
         await page.goto(url, { waitUntil: 'domcontentloaded' });
 
-        // വാർത്തകളും ചിത്രങ്ങളും ഡീറ്റെയിൽസും സ്ക്രാപ്പ് ചെയ്യുന്നു
+        // വാർത്തകളും അതിന് അനുയോജ്യമായ ചിത്രങ്ങളും സ്ക്രാപ്പ് ചെയ്യുന്നു
         const newsData = await page.evaluate(() => {
             let articles = [];
-            // ചിത്രങ്ങളും പാരഗ്രാഫുകളും ഉള്ള സെക്ഷനുകൾ കണ്ടെത്തുന്നു
-            const sections = document.querySelectorAll('p, li');
+            // പ്രധാന സെക്ഷനുകളും അതിലെ ചിത്രങ്ങളും പരിശോധിക്കുന്നു
+            const paragraphs = document.querySelectorAll('p, li');
             
-            for(let i = 0; i < sections.length; i++) {
-                let text = sections[i].innerText.trim();
-                if(text.length > 30 && !articles.some(a => a.text === text)) {
-                    // താൽക്കാലികമായി സ്റ്റാൻഡേർഡ് ആയ പ്രകൃതി/പഠന ചിത്രങ്ങൾ അല്ലെങ്കിൽ സൈറ്റിൽ നിന്നുള്ളവ ചേർക്കാം
-                    let dummyImg = "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80";
+            for(let i = 0; i < paragraphs.length; i++) {
+                let text = paragraphs[i].innerText.trim();
+                if(text.length > 30 && !articles.some(a => a.detail === text)) {
                     
+                    // ആ പാരഗ്രാഫിന് സമീപം വല്ല ചിത്രങ്ങളും ഉണ്ടോ എന്ന് നോക്കുന്നു
+                    let imgElement = paragraphs[i].querySelector('img') || paragraphs[i].closest('div')?.querySelector('img');
+                    let imgSrc = imgElement ? imgElement.src : null;
+
+                    // ചിത്രങ്ങൾ ഇല്ലെങ്കിൽ പി.എസ്.സി / പഠനവുമായി ബന്ധപ്പെട്ട മികച്ച സ്റ്റാൻഡേർഡ് ചിത്രങ്ങൾ നൽകാം
+                    if(!imgSrc || imgSrc.includes('data:image')) {
+                        const defaultImages = [
+                            "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=600&q=80",
+                            "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80",
+                            "https://images.unsplash.com/photo-1501504905252-473c47e087f8?auto=format&fit=crop&w=600&q=80",
+                            "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80"
+                        ];
+                        imgSrc = defaultImages[articles.length % defaultImages.length];
+                    }
+
                     articles.push({
-                        title: text.substring(0, 60) + "...",
+                        title: text.substring(0, 55) + "...",
                         detail: text,
-                        image: dummyImg
+                        image: imgSrc
                     });
                     
-                    if(articles.length >= 25) break; // കൃത്യം 25 എണ്ണം വരെ എടുക്കുന്നു
+                    if(articles.length >= 25) break; // കൃത്യം 25 എണ്ണം
                 }
             }
             return articles;
@@ -47,7 +60,7 @@ async function runCurrentAffairsBot() {
             newsHTML += `
                 <div class="news-card">
                     <div class="news-img-box">
-                        <img src="${news.image}" alt="Current Affairs Image" loading="lazy">
+                        <img src="${news.image}" alt="News Image" loading="lazy">
                     </div>
                     <div class="news-content">
                         <span class="badge">സെക്ഷൻ #${index + 1}</span>
@@ -62,14 +75,13 @@ async function runCurrentAffairsBot() {
             newsHTML = '<p style="text-align:center; color:#666; padding: 20px;">ഇന്നത്തെ കറന്റ് അഫയേഴ്സ് അപ്ഡേറ്റുകൾ ഉടൻ ലഭ്യമാകും.</p>';
         }
 
-        // പ്രൊഫഷണൽ ആൻഡ് മോഡേൺ HTML & CSS ഡിസൈൻ
         const htmlContent = `
             <!DOCTYPE html>
             <html lang="ml">
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Daily PSC Current Affairs & Notes</title>
+                    <title>Daily PSC Current Affairs</title>
                     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;600;700&display=swap" rel="stylesheet">
                     <style>
                         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -192,7 +204,7 @@ async function runCurrentAffairsBot() {
         `;
 
         fs.writeFileSync('Current_Affairs.html', htmlContent, 'utf8');
-        console.log("Advanced HTML file with images and details created successfully!");
+        console.log("Current Affairs HTML with matched images created successfully!");
 
     } catch (error) {
         console.error("Error:", error);
