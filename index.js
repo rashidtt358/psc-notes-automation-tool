@@ -21,29 +21,29 @@ async function runScraper() {
             let text = '';
             let count = 0;
             for(let i = 0; i < paragraphs.length; i++) {
-                if(paragraphs[i].innerText.trim() !== "") {
-                    text += `<p>${paragraphs[i].innerText}</p>`;
+                if(paragraphs[i].textContent.trim() !== "") {
+                    // innerText-ന് പകരം innerHTML ഉപയോഗിക്കുന്നു (സ്പേസുകൾ നഷ്ടപ്പെടാതിരിക്കാൻ)
+                    text += `<p>${paragraphs[i].innerHTML}</p>`;
                     count++;
-                    if(count >= 5) break; // ആദ്യത്തെ 5 പാരഗ്രാഫ് മാത്രം എടുക്കുന്നു
+                    if(count >= 5) break; 
                 }
             }
             return text || "<p>നോട്സ് കണ്ടെത്താൻ കഴിഞ്ഞില്ല!</p>";
         });
 
-        // മൊബൈലിൽ കൃത്യമായി വായിക്കാൻ പാകത്തിലുള്ള HTML ഡിസൈൻ
         const htmlContent = `
             <!DOCTYPE html>
             <html lang="ml">
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <!-- ഗൂഗിൾ ഫോണ്ട് (Noto Sans Malayalam) -->
                     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;700&display=swap" rel="stylesheet">
                     <style>
                         body { 
                             font-family: 'Noto Sans Malayalam', sans-serif; 
                             padding: 15px; 
-                            line-height: 1.8; 
+                            line-height: 2.2; /* വരികൾ തമ്മിലുള്ള അകലം കൂട്ടി */
+                            word-spacing: 2px; /* വാക്കുകൾ തമ്മിലുള്ള അകലം കൂട്ടി */
                             color: #222; 
                             background-color: #f4f7f6;
                         }
@@ -65,8 +65,12 @@ async function runScraper() {
                         p { 
                             font-size: 16px; 
                             margin-bottom: 15px; 
-                            text-align: left; /* Justify ഒഴിവാക്കി ലെഫ്റ്റ് ആക്കി */
-                            word-wrap: break-word;
+                            text-align: left; 
+                        }
+                        /* വിക്കിപീഡിയയിലെ ലിങ്കുകൾ സാധാരണ ടെക്സ്റ്റ് പോലെ കാണിക്കാൻ */
+                        a {
+                            color: #222;
+                            text-decoration: none;
                         }
                     </style>
                 </head>
@@ -79,7 +83,6 @@ async function runScraper() {
             </html>
         `;
 
-        // HTML ഫയൽ UTF-8 ഫോർമാറ്റിൽ സേവ് ചെയ്യുന്നു
         fs.writeFileSync('PSC_Notes.html', htmlContent, 'utf8');
         console.log("HTML file created successfully!");
 
