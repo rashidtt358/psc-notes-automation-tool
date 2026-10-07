@@ -1,0 +1,31 @@
+name: Daily PSC PDF Scraper
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # ദിവസവും രാവിലെ ഇന്ത്യൻ സമയം 7:30 ന് റൺ ആകും
+  workflow_dispatch: # നമുക്ക് എപ്പോൾ വേണമെങ്കിലും മാനുവൽ ആയി റൺ ചെയ്യാൻ
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Run Scraper Script
+      run: node index.js
+
+    - name: Upload PDF as Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Daily-PSC-Notes
+        path: PSC_Notes.pdf
