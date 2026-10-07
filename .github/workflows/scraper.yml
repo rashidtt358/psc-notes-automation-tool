@@ -18,6 +18,9 @@ jobs:
       with:
         node-version: '22' 
 
+    - name: Install Malayalam Fonts
+      run: sudo apt-get update && sudo apt-get install -y fonts-smc
+
     - name: Install Dependencies
       run: npm install
 
