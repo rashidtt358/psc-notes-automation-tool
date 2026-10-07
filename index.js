@@ -3,26 +3,17 @@ const fs = require('fs');
 
 async function runScraper() {
     console.log("Starting Scraper...");
-    // ഗിറ്റ്ഹബ് സെർവറിന് അനുയോജ്യമായ പ്രത്യേക ഗ്രാഫിക്സ് സെറ്റിംഗ്സുകൾ
     const browser = await puppeteer.launch({ 
         headless: "new",
-        args: [
-            '--no-sandbox', 
-            '--disable-setuid-sandbox', 
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--no-zygote',
-            '--single-process'
-        ]
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     
     try {
         const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36');
         
         console.log("Going to Wikipedia...");
         const url = encodeURI('https://ml.wikipedia.org/wiki/കേരളം');
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
 
         console.log("Extracting text...");
         const notesContent = await page.evaluate(() => {
@@ -33,41 +24,64 @@ async function runScraper() {
                 if(paragraphs[i].innerText.trim() !== "") {
                     text += `<p>${paragraphs[i].innerText}</p>`;
                     count++;
-                    if(count >= 5) break;
+                    if(count >= 5) break; // ആദ്യത്തെ 5 പാരഗ്രാഫ് മാത്രം എടുക്കുന്നു
                 }
             }
             return text || "<p>നോട്സ് കണ്ടെത്താൻ കഴിഞ്ഞില്ല!</p>";
         });
 
+        // മൊബൈലിൽ കൃത്യമായി വായിക്കാൻ പാകത്തിലുള്ള HTML ഡിസൈൻ
         const htmlContent = `
+            <!DOCTYPE html>
             <html lang="ml">
                 <head>
                     <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <!-- ഗൂഗിൾ ഫോണ്ട് (Noto Sans Malayalam) -->
+                    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;700&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Meera', 'Rachana', sans-serif; padding: 40px; line-height: 1.8; color: #333; }
-                        h1 { color: #2c5364; text-align: center; border-bottom: 2px solid #2c5364; padding-bottom: 10px; }
-                        p { font-size: 16px; margin-bottom: 15px; text-align: justify; }
+                        body { 
+                            font-family: 'Noto Sans Malayalam', sans-serif; 
+                            padding: 15px; 
+                            line-height: 1.8; 
+                            color: #222; 
+                            background-color: #f4f7f6;
+                        }
+                        .container {
+                            max-width: 800px;
+                            margin: 0 auto;
+                            background: #fff;
+                            padding: 25px;
+                            border-radius: 10px;
+                            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                        }
+                        h1 { 
+                            color: #2c5364; 
+                            text-align: center; 
+                            border-bottom: 2px solid #2c5364; 
+                            padding-bottom: 10px; 
+                            font-size: 24px;
+                        }
+                        p { 
+                            font-size: 16px; 
+                            margin-bottom: 15px; 
+                            text-align: left; /* Justify ഒഴിവാക്കി ലെഫ്റ്റ് ആക്കി */
+                            word-wrap: break-word;
+                        }
                     </style>
                 </head>
                 <body>
-                    <h1>കേരളം - PSC Notes</h1>
-                    ${notesContent}
+                    <div class="container">
+                        <h1>കേരളം - PSC Notes</h1>
+                        ${notesContent}
+                    </div>
                 </body>
             </html>
         `;
 
-        // 1. HTML ഫയൽ ആയി സേവ് ചെയ്യുന്നു (ബാക്കപ്പ്)
-        fs.writeFileSync('PSC_Notes.html', htmlContent);
-        console.log("HTML file created!");
-
-        // 2. PDF ആയി സേവ് ചെയ്യുന്നു
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-        await page.pdf({ 
-            path: 'PSC_Notes.pdf', 
-            format: 'A4', 
-            printBackground: true 
-        });
-        console.log("PDF Created Successfully!");
+        // HTML ഫയൽ UTF-8 ഫോർമാറ്റിൽ സേവ് ചെയ്യുന്നു
+        fs.writeFileSync('PSC_Notes.html', htmlContent, 'utf8');
+        console.log("HTML file created successfully!");
 
     } catch (error) {
         console.error("Error:", error);
