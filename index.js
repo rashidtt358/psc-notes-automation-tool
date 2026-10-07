@@ -10,12 +10,13 @@ async function runScraper() {
     try {
         const page = await browser.newPage();
         
+        console.log("Navigating to Wikipedia...");
         const url = encodeURI('https://ml.wikipedia.org/wiki/കേരളം');
         await page.goto(url, { waitUntil: 'networkidle2' });
-        await page.waitForSelector('.mw-parser-output');
 
+        console.log("Extracting text...");
         const notesContent = await page.evaluate(() => {
-            const paragraphs = document.querySelectorAll('.mw-parser-output p');
+            const paragraphs = document.querySelectorAll('#mw-content-text p');
             let text = '';
             for(let i = 0; i < 5 && i < paragraphs.length; i++) {
                 if(paragraphs[i].innerText.trim() !== "") {
@@ -25,14 +26,15 @@ async function runScraper() {
             return text || "<p>നോട്സ് കണ്ടെത്താൻ കഴിഞ്ഞില്ല!</p>";
         });
 
+        console.log("Scraped Data Length: ", notesContent.length); // ഡാറ്റ കിട്ടിയോ എന്ന് ചെക്ക് ചെയ്യാൻ
+
         const htmlContent = `
             <html lang="ml">
                 <head>
                     <meta charset="UTF-8">
-                    <!-- ഗൂഗിളിൽ നിന്നുള്ള മലയാളം ഫോണ്ട് ആഡ് ചെയ്തു -->
-                    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;700&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Noto Sans Malayalam', sans-serif; padding: 40px; color: #333; line-height: 1.8; }
+                        /* ഉബുണ്ടുവിൽ ഇൻസ്റ്റാൾ ചെയ്ത മലയാളം ഫോണ്ടുകൾ */
+                        body { font-family: 'Meera', 'Rachana', 'AnjaliOldLipi', sans-serif; padding: 40px; color: #333; line-height: 1.8; }
                         h1 { color: #2c5364; text-align: center; border-bottom: 2px solid #2c5364; padding-bottom: 10px; margin-bottom: 30px; }
                         p { font-size: 16px; margin-bottom: 15px; text-align: justify; }
                     </style>
@@ -46,9 +48,7 @@ async function runScraper() {
 
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
         
-        // ഫോണ്ട് പൂർണ്ണമായും ലോഡ് ആകാൻ കാത്തിരിക്കുന്നു (ഇതാണ് പ്രധാനം)
-        await page.evaluateHandle('document.fonts.ready');
-        
+        console.log("Creating PDF...");
         await page.pdf({ 
             path: 'PSC_Notes.pdf', 
             format: 'A4', 
@@ -58,7 +58,7 @@ async function runScraper() {
 
         console.log("PDF Created Successfully!");
     } catch (error) {
-        console.error("Error generating PDF:", error);
+        console.error("Error:", error);
     } finally {
         await browser.close();
     }
