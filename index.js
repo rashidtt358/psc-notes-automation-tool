@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 
 async function runCurrentAffairsBot() {
-    console.log("Starting Deshabhimani Current Affairs Bot...");
+    console.log("Starting Deshabhimani Smart Bot...");
     const browser = await puppeteer.launch({ 
         headless: "new",
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
@@ -12,35 +12,27 @@ async function runCurrentAffairsBot() {
         const page = await browser.newPage();
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36');
         
-        console.log("Fetching latest news from Deshabhimani...");
-        // ദേശാഭിമാനി വെബ്സൈറ്റിന്റെ ലിങ്ക്
+        console.log("Fetching news from Deshabhimani...");
         const url = encodeURI('https://www.deshabhimani.com/news/kerala'); 
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // വാർത്തകളും ചിത്രങ്ങളും സ്ക്രാപ്പ് ചെയ്യുന്നു
+        // പേജിലുള്ള എല്ലാ പ്രധാന ഹെഡിങ്ങുകളും പാരഗ്രാഫുകളും സ്ക്രാപ്പ് ചെയ്യുന്നു
         const newsData = await page.evaluate(() => {
             let articles = [];
-            // ദേശാഭിമാനിയിലെ വാർത്താ കാർഡുകൾ അല്ലെങ്കിൽ ഹെഡിങ്ങുകൾ സെലക്ട് ചെയ്യുന്നു
-            const newsItems = document.querySelectorAll('.card, .news-item, article, .col-sm-4');
+            // വെബ്‌സൈറ്റിലെ എല്ലാ ലിങ്കുകളും ഹെഡിങ്ങുകളും പരിശോധിക്കുന്നു
+            const elements = document.querySelectorAll('a, h2, h3, p');
             
-            for(let i = 0; i < newsItems.length; i++) {
-                let titleEl = newsItems[i].querySelector('h3, h2, a');
-                let descEl = newsItems[i].querySelector('p');
-                let imgEl = newsItems[i].querySelector('img');
-
-                let title = titleEl ? titleEl.innerText.trim() : '';
-                let detail = descEl ? descEl.innerText.trim() : title;
-                let imgSrc = imgEl ? (imgEl.src || imgEl.getAttribute('data-src')) : null;
-
-                if(title.length > 15 && !articles.some(a => a.title === title)) {
-                    // ഇമേജ് ലഭ്യമല്ലെങ്കിൽ സ്റ്റാൻഡേർഡ് പിക്ചർ നൽകാം
-                    if(!imgSrc || imgSrc.includes('data:image')) {
-                        imgSrc = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80";
-                    }
-
+            for(let i = 0; i < elements.length; i++) {
+                let text = elements[i].innerText.trim();
+                
+                // അർത്ഥവത്തായ വാർത്തകൾ മാത്രം തിരഞ്ഞെടുക്കുന്നു (നീളം 20-ൽ കൂടുതലുള്ളവ)
+                if(text.length > 20 && text.length < 250 && !articles.some(a => a.title === text)) {
+                    
+                    let imgSrc = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=600&q=80";
+                    
                     articles.push({
-                        title: title,
-                        detail: detail || title,
+                        title: text,
+                        detail: "കേരള പരീക്ഷകൾക്കും പി.എസ്.സി തയാറെടുപ്പുകൾക്കും ഉപകാരപ്രദമായ പ്രധാന വാർത്താ വിശകലനം.",
                         image: imgSrc
                     });
 
@@ -201,7 +193,7 @@ async function runCurrentAffairsBot() {
         `;
 
         fs.writeFileSync('Current_Affairs.html', htmlContent, 'utf8');
-        console.log("Deshabhimani Current Affairs HTML created successfully!");
+        console.log("Deshabhimani HTML updated successfully!");
 
     } catch (error) {
         console.error("Error:", error);
